@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log*
+
+# Secrets -- the critical entry.
+.env
+.env.*
+!.env.example
+
+# Not needed at build time
+Dockerfile
+.dockerignore
+.git
+.gitignore
+*.md
+test/
+coverage/
+.DS_Store

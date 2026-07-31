@@ -1,0 +1,10 @@
+# Secrets -- the single most important line in this file.
+.env
+*.env.local
+
+# Dependencies / build output (rebuilt inside the image, never shipped from host)
+node_modules/
+dist/
+
+# OS noise
+.DS_Store

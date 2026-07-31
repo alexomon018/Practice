@@ -1,0 +1,21 @@
+# See backend/.dockerignore for the full reasoning. Short version:
+# smaller context = faster builds, better cache hits, no leaked secrets.
+
+# Reinstalled inside the build stage; host copies may target the wrong platform.
+node_modules
+npm-debug.log*
+
+# Built inside the image. Shipping a host-built dist/ is how "works on my
+# machine" gets into production.
+dist
+
+.env
+.env.*
+!.env.example
+
+Dockerfile
+.dockerignore
+.git
+.gitignore
+*.md
+.DS_Store

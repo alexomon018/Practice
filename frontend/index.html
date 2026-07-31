@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Docker Practice Shop</title>
+    <!--
+      Loaded BEFORE the React bundle and NOT fingerprinted by Vite, so the
+      container entrypoint can rewrite it at startup. nginx sends
+      Cache-Control: no-store for this exact path (see nginx.conf).
+    -->
+    <script src="/config.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

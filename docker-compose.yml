@@ -1,0 +1,159 @@
+x-logging: &default-logging ## disk capping driver is not allowed.
+
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart: &default-restart
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-practice}-db
+    <<: *default-restart
+    logging: *default-logging
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h 127.0.0.1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+    networks:
+      - data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    image: ${DOCKERHUB_USER}/practice-backend:${IMAGE_TAG}
+    container_name: ${COMPOSE_PROJECT_NAME:-practice}-backend
+    <<: *default-restart
+    logging: *default-logging
+
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      LOG_LEVEL: ${LOG_LEVEL}
+      PORT: ${BACKEND_PORT}
+      SERVICE_NAME: backend
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${APP_DB_USER}
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD}
+
+      DB_CONNECT_MAX_RETRIES: ${DB_CONNECT_MAX_RETRIES}
+      DB_CONNECT_RETRY_DELAY_MS: ${DB_CONNECT_RETRY_DELAY_MS}
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      # The only service on BOTH networks. It is the bridge between the public
+      # edge and the private data tier -- which is exactly what an API is.
+      - edge
+      - data
+
+    # `expose` publishes NOTHING to the host. It is documentation for humans
+    # and for `docker run -P`. Container-to-container reachability is decided
+    # entirely by shared network membership, not by this key.
+    expose:
+      - "${BACKEND_PORT}"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runtime
+    image: ${DOCKERHUB_USER}/practice-frontend:${IMAGE_TAG}
+    container_name: ${COMPOSE_PROJECT_NAME:-practice}-frontend
+    <<: *default-restart
+    logging: *default-logging
+
+    environment:
+      API_BASE_URL: ${FRONTEND_API_BASE_URL}
+      APP_TITLE: ${FRONTEND_APP_TITLE}
+
+    depends_on:
+      - backend
+
+    networks:
+      - edge
+
+    expose:
+      - "80"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-practice}-nginx
+    <<: *default-restart
+    logging: *default-logging
+
+    ports:
+      - "${NGINX_HOST_PORT}:80"
+
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+
+    depends_on:
+      - frontend
+      - backend
+
+    networks:
+      - edge
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  edge:
+    driver: bridge
+    name: ${COMPOSE_PROJECT_NAME:-practice}-edge
+
+  data:
+    driver: bridge
+    name: ${COMPOSE_PROJECT_NAME:-practice}-data
+    internal: true
+
+volumes:
+  pgdata:
+    name: ${COMPOSE_PROJECT_NAME:-practice}_pgdata
