@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: practice
+
+resources:
+  - namespace.yaml
+  - postgres-cluster.yaml
+  - backend-configmap.yaml
+  - backend-service.yaml
+  - backend-deployment.yaml
+  - frontend-configmap.yaml
+  - frontend-service.yaml
+  - frontend-deployment.yaml
+  - ingress.yaml
+
+configMapGenerator:
+  - name: postgres-initdb
+    files:
+      - initdb/01_schema.sql
+      - initdb/02_seed.sql
+      - initdb/03_ownership.sql
+
+# The Cluster references postgres-initdb by name, and kustomize's name-reference
+# rewriting does not know about CNPG's CRD -- so the hash suffix must be off.
+generatorOptions:
+  disableNameSuffixHash: true
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: practice

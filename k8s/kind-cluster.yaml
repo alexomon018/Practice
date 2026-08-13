@@ -1,0 +1,17 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: practice
+
+nodes:
+  - role: control-plane
+  - role: worker
+    labels:
+      practice.io/role: frontend
+
+  - role: worker
+    labels:
+      practice.io/role: backend
+
+  - role: worker
+    labels:
+      practice.io/role: data

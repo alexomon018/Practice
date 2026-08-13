@@ -2,6 +2,10 @@
 .env
 *.env.local
 
+# No Kubernetes secret source any more: the CloudNativePG operator generates
+# the database password into the `postgres-app` Secret at bootstrap, so there
+# is nothing credential-shaped in k8s/ to keep out of git.
+
 # Dependencies / build output (rebuilt inside the image, never shipped from host)
 node_modules/
 dist/

@@ -1,0 +1,61 @@
+# The frontend is stateless static files behind nginx -- the textbook case for
+# a Deployment. Two replicas, because nothing stops us: no shared disk, no
+# leader, no session state. Contrast with Postgres, where a second replica
+# would be a data-corruption bug.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: practice
+  labels:
+    app: frontend
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      nodeSelector:
+        practice.io/role: frontend
+
+      containers:
+        - name: frontend
+          image: practice-frontend:0.1.0
+
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 80
+
+          envFrom:
+            - configMapRef:
+                name: frontend-config
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi

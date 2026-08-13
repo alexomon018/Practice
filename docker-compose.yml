@@ -118,6 +118,7 @@ services:
     expose:
       - "80"
 
+  ## this will become ingres on kubernetes
   nginx:
     image: nginx:1.27-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-practice}-nginx
@@ -144,6 +145,38 @@ services:
       retries: 3
       start_period: 5s
 
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: ${COMPOSE_PROJECT_NAME:-practice}-node-exporter
+    <<: *default-restart
+    logging: *default-logging
+
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|rootfs/var/lib/docker/.+)($$|/)"
+
+    networks:
+      - monitoring
+
+  # Debug tool only -- not part of the "real" stack. curl's own image has no
+  # long-running process, so it exits immediately unless we override the
+  # entrypoint to idle forever; that's what keeps this container alive for
+  # `docker compose exec` instead of one-shot `docker run --rm ...`.
+  monitoring-tools:
+    image: curlimages/curl:8.10.1
+    container_name: ${COMPOSE_PROJECT_NAME:-practice}-monitoring-tools
+    entrypoint: ["sleep", "infinity"]
+    networks:
+      - monitoring
+
+  ## Check this out.
 networks:
   edge:
     driver: bridge
@@ -153,6 +186,10 @@ networks:
     driver: bridge
     name: ${COMPOSE_PROJECT_NAME:-practice}-data
     internal: true
+
+  monitoring:
+    driver: bridge
+    name: ${COMPOSE_PROJECT_NAME:-practice}-monitoring
 
 volumes:
   pgdata:

@@ -1,0 +1,35 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  namespace: practice
+
+spec:
+  instances: 1
+
+  affinity:
+    nodeSelector:
+      practice.io/role: data
+
+  storage:
+    size: 1Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+  bootstrap:
+    initdb:
+      database: practicedb
+      owner: app_rw
+      postInitApplicationSQLRefs:
+        configMapRefs:
+          - name: postgres-initdb
+            key: 01_schema.sql
+          - name: postgres-initdb
+            key: 02_seed.sql
+          - name: postgres-initdb
+            key: 03_ownership.sql
