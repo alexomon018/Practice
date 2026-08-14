@@ -4,32 +4,31 @@ kind: Kustomization
 namespace: practice-dev
 
 resources:
-  - ../../base
+- ../../base
 
 # CI owns both fields here. Every merge into develop rewrites newName and
 # newTag together via `kustomize edit set image`, and that commit -- landed on
 # main, which is what Argo tracks -- is what gets synced. Editing by hand is
 # pointless. For a local inner loop use docker-compose.yml, not this overlay.
 images:
-  - name: practice-backend
-    newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
-    newTag: 0906ed5
-  - name: practice-frontend
-    newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
-    newTag: 0906ed5
+- name: practice-backend
+  newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
+  newTag: 3ef5d62
+- name: practice-frontend
+  newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
+  newTag: 3ef5d62
 
 # One of each: dev exists to prove the develop branch integrates, and a second
 # replica proves nothing here that the staging overlay does not prove better.
 replicas:
-  - name: backend
-    count: 1
-  - name: frontend
-    count: 1
+- count: 1
+  name: backend
+- count: 1
+  name: frontend
 
 patches:
-  - path: backend-config-patch.yaml
+- path: backend-config-patch.yaml
 
 labels:
-  - includeSelectors: false
-    pairs:
-      app.kubernetes.io/environment: dev
+- pairs:
+    app.kubernetes.io/environment: dev
