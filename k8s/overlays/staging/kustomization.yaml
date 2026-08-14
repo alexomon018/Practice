@@ -12,10 +12,10 @@ resources:
 images:
 - name: practice-backend
   newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
-  newTag: 0906ed5
+  newTag: "8449695"
 - name: practice-frontend
   newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
-  newTag: 0906ed5
+  newTag: "8449695"
 
 replicas:
 - count: 2
