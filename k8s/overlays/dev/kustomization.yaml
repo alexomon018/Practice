@@ -6,17 +6,10 @@ namespace: practice-dev
 resources:
   - ../../base
 
-# CI owns both fields here. Every merge into develop rewrites newName and
-# newTag together via `kustomize edit set image`, and that commit -- landed on
-# main, which is what Argo tracks -- is what gets synced. Editing by hand is
-# pointless. For a local inner loop use docker-compose.yml, not this overlay.
-images:
-  - name: practice-backend
-    newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
-    newTag: 0906ed5
-  - name: practice-frontend
-    newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
-    newTag: 0906ed5
+# No images block -- the tag is inherited from base. dev runs a different image
+# from staging because its Application tracks the develop branch, not because
+# this file says anything different. For a local inner loop use
+# docker-compose.yml, not this overlay.
 
 # One of each: dev exists to prove the develop branch integrates, and a second
 # replica proves nothing here that the staging overlay does not prove better.

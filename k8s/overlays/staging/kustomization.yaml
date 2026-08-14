@@ -6,17 +6,8 @@ namespace: practice-staging
 resources:
 - ../../base
 
-# CI owns both fields here. `kustomize edit set image` is passed a full image
-# reference, so every push to main rewrites newName and newTag together --
-# that commit is what Argo then syncs. Editing these by hand is pointless.
-images:
-- name: practice-backend
-  newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
-  newTag: d3d3b28
-- name: practice-frontend
-  newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
-  newTag: d3d3b28
-
+# No images block -- the tag is inherited from base. This file describes only
+# how staging differs from everywhere else.
 replicas:
 - count: 2
   name: backend

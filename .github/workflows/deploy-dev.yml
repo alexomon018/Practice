@@ -1,9 +1,9 @@
 name: deploy-dev
 
 # The integration path: every merge into develop builds, pushes to ECR and
-# pins the dev overlay. Same paths filter as deploy.yml -- changes under k8s/
-# are deployment state that Argo reads directly, and rebuilding on them would
-# make this workflow retrigger itself on its own pin commit.
+# pins the image on develop -- the branch dev's Application tracks. Same paths
+# filter as deploy.yml: only code produces an image, and nothing under k8s/
+# does.
 on:
   push:
     branches: [develop]
@@ -13,7 +13,7 @@ on:
       - ".github/workflows/deploy-dev.yml"
       - ".github/workflows/_build.yml"
       - ".github/actions/ecr-build-push/**"
-      - ".github/scripts/pin-overlay.sh"
+      - ".github/scripts/pin-image.sh"
   workflow_dispatch:
 
 # Deny by default, grant per job.
@@ -45,7 +45,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          # develop, not main: dev's Application tracks develop, so the pin
+          # belongs on the branch that triggered this run rather than being
+          # landed on a branch dev never reads.
+          ref: develop
           fetch-depth: 0
 
       - name: Install kustomize
@@ -59,9 +62,9 @@ jobs:
           tar -xzf kustomize.tar.gz
           sudo mv kustomize /usr/local/bin/
 
-      - name: Pin dev to this SHA
+      - name: Pin develop to this SHA
         env:
           REGISTRY: ${{ vars.ECR_REGISTRY }}
-          OVERLAY: dev
+          BRANCH: develop
           TAG: ${{ needs.build.outputs.tag }}
-        run: .github/scripts/pin-overlay.sh
+        run: .github/scripts/pin-image.sh

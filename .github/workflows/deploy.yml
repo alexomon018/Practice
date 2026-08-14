@@ -1,8 +1,12 @@
 name: deploy
 
-# Only application code triggers a deploy. Changes under k8s/ are deployment
-# state -- Argo picks those up directly, and rebuilding on them would make
-# this workflow retrigger itself on its own commit.
+# Only application code triggers a deploy: this workflow exists to build
+# images, and nothing under k8s/ produces one.
+#
+# Manifest changes need no trigger. staging tracks main, so a commit under k8s/
+# reaches it on Argo's next poll with no workflow involved; prod tracks the
+# prod-release branch, so the same commit cannot reach prod until a promotion
+# moves it. The gate lives in the Application, not in this filter.
 on:
   push:
     branches: [main]
@@ -12,7 +16,7 @@ on:
       - ".github/workflows/deploy.yml"
       - ".github/workflows/_build.yml"
       - ".github/actions/ecr-build-push/**"
-      - ".github/scripts/pin-overlay.sh"
+      - ".github/scripts/pin-image.sh"
   workflow_dispatch:
 
 # Deny by default, grant per job. Anything added below starts with no token
@@ -43,6 +47,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment: staging
+    outputs:
+      sha: ${{ steps.pin.outputs.sha }}
     permissions:
       # No id-token here: this job pushes a commit, it never talks to AWS.
       contents: write
@@ -62,25 +68,27 @@ jobs:
           tar -xzf kustomize.tar.gz
           sudo mv kustomize /usr/local/bin/
 
-      - name: Pin staging to this SHA
+      - name: Pin main to this SHA
+        id: pin
         env:
           REGISTRY: ${{ vars.ECR_REGISTRY }}
-          OVERLAY: staging
+          BRANCH: main
           TAG: ${{ needs.build.outputs.tag }}
-        run: .github/scripts/pin-overlay.sh
+        run: .github/scripts/pin-image.sh
 
   # The gate. `environment: production` holds this job in the Actions UI until
   # a required reviewer approves it -- nothing below runs before that click.
   #
-  # It does not rebuild. The tag is read out of the staging overlay, so what
-  # ships to prod is the exact artifact staging has been running, not a fresh
-  # build of the same source that could resolve a different base image.
+  # It does not rebuild and it copies nothing. Promotion moves the prod-release
+  # branch to a commit that already exists, so prod renders the same tree
+  # staging rendered -- image pin, overlay patches, initdb SQL and all -- and
+  # not a reassembled approximation of it.
   promote-prod:
     needs: deploy-staging
     runs-on: ubuntu-latest
     environment: production
     permissions:
-      # No id-token here either: promotion is a commit, not a build.
+      # No id-token here either: promotion is a ref update, not a build.
       contents: write
     concurrency:
       group: deploy-prod
@@ -102,16 +110,12 @@ jobs:
           tar -xzf kustomize.tar.gz
           sudo mv kustomize /usr/local/bin/
 
-      - name: Promote staging's image to prod
+      - name: Move prod-release to the promoted commit
         env:
-          REGISTRY: ${{ vars.ECR_REGISTRY }}
-          OVERLAY: prod
-          SOURCE_OVERLAY: staging
-        run: .github/scripts/pin-overlay.sh
+          TARGET_SHA: ${{ needs.deploy-staging.outputs.sha }}
+        run: .github/scripts/promote.sh
 
       # Runs after the promotion, never before: a tag naming a release that
       # failed to land is worse than an untagged one that did.
       - name: Tag the release
-        env:
-          OVERLAY: prod
         run: .github/scripts/tag-release.sh

@@ -7,15 +7,23 @@ spec:
   project: default
   source:
     repoURL: https://github.com/alexomon018/Practice.git
-    targetRevision: main
+    # A branch this repo moves deliberately, never one that moves on its own.
+    # prod-release is advanced only by .github/scripts/promote.sh, behind the
+    # `production` environment approval -- so prod runs the whole tree at
+    # whatever commit that branch points to: base's image pin, this overlay's
+    # patches, the initdb SQL, all frozen together.
+    #
+    # This field is stable. Promotion moves the branch, not this file, which is
+    # why nothing needs to reconcile k8s/argocd back into the cluster.
+    targetRevision: prod-release
     path: k8s/overlays/prod
   destination:
     server: https://kubernetes.default.svc
     namespace: practice-prod
 
   # The GitHub `production` environment approval is the gate now, so there is
-  # no second manual click here. selfHeal is what makes `git revert` of a
-  # promotion commit a working rollback.
+  # no second manual click here. selfHeal is what makes rolling prod-release
+  # back to its previous commit a working rollback.
   syncPolicy:
     automated: { prune: true, selfHeal: true }
     syncOptions:

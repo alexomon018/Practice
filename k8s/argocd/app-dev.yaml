@@ -7,7 +7,10 @@ spec:
   project: default
   source:
     repoURL: https://github.com/alexomon018/Practice.git
-    targetRevision: main
+    # dev IS develop. deploy-dev.yml used to build on develop but land its pin
+    # on main, so dev's deployed state lived on a branch dev did not track.
+    # Pointing at develop removes that hop.
+    targetRevision: develop
     path: k8s/overlays/dev
   destination:
     server: https://kubernetes.default.svc

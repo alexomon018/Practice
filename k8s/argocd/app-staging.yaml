@@ -7,6 +7,9 @@ spec:
   project: default
   source:
     repoURL: https://github.com/alexomon018/Practice.git
+    # staging IS main. Every commit that lands -- an image pin, a change under
+    # k8s/base, a tweak to this overlay -- reaches staging on the next poll,
+    # with no workflow involved. That is what staging is for.
     targetRevision: main
     path: k8s/overlays/staging
   destination:

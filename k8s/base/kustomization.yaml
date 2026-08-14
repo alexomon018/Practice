@@ -31,3 +31,16 @@ labels:
   - includeSelectors: false
     pairs:
       app.kubernetes.io/part-of: practice
+
+# The one image pin in this repo. All three overlays inherit it, so a commit
+# carries exactly one answer to "which build is this?" -- and an environment
+# selects a build by pointing at a commit, not by keeping its own copy of the
+# tag. Written by CI on every deploy; editing it by hand pins an image that
+# may not exist in ECR.
+images:
+  - name: practice-backend
+    newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
+    newTag: d3d3b28
+  - name: practice-frontend
+    newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
+    newTag: d3d3b28
