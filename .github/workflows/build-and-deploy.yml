@@ -91,4 +91,8 @@ jobs:
           fi
           git add k8s/overlays/staging/kustomization.yaml
           git commit -m "deploy(staging): ${{ steps.sha.outputs.short }} [skip ci]"
+          # The build runs at the triggering SHA, so main may have moved on --
+          # on a re-run, or on two pushes in quick succession. Rebase rather
+          # than force: the bump is the only thing this job owns.
+          git pull --rebase origin main
           git push
