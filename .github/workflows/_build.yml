@@ -1,0 +1,65 @@
+name: build (reusable)
+
+# Underscore prefix marks this as callable-only -- it has no push or
+# pull_request trigger of its own and never appears as a run in the Actions
+# tab except nested under whoever called it.
+#
+# Callers: ci.yml (pull_request, push: false) and deploy.yml (main, push: true).
+# The single matrix below is the one source of truth for what services exist,
+# so adding a third means editing one line here and nowhere else.
+
+on:
+  workflow_call:
+    inputs:
+      push:
+        description: Push images to ECR. False builds and discards, for PR verification.
+        required: false
+        default: false
+        type: boolean
+      registry:
+        description: ECR registry host. Required when push is true.
+        required: false
+        default: ""
+        type: string
+      role-arn:
+        description: IAM role to assume via OIDC. Required when push is true.
+        required: false
+        default: ""
+        type: string
+      aws-region:
+        description: Region of the registry.
+        required: false
+        default: us-east-1
+        type: string
+    outputs:
+      tag:
+        description: Tag the images were built with. Deploy pins this exact value.
+        value: ${{ jobs.build.outputs.tag }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend, frontend]
+    outputs:
+      tag: ${{ steps.sha.outputs.short }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Resolve short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/ecr-build-push
+        with:
+          repository: practice-${{ matrix.service }}
+          context: ./${{ matrix.service }}
+          tag: ${{ steps.sha.outputs.short }}
+          push: ${{ inputs.push }}
+          registry: ${{ inputs.registry }}
+          role-arn: ${{ inputs.role-arn }}
+          aws-region: ${{ inputs.aws-region }}

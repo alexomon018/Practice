@@ -1,0 +1,112 @@
+name: ecr-build-push
+description: >
+  Build one image, and optionally assume an AWS role via OIDC and push it to
+  ECR. Deliberately knows nothing about this repo's layout or naming -- the
+  caller supplies the full repository name and context path, so the action
+  stays usable from any repo pushing to any registry.
+
+inputs:
+  repository:
+    description: ECR repository name, without the registry host.
+    required: true
+  context:
+    description: Docker build context path.
+    required: true
+  tag:
+    description: Image tag.
+    required: true
+  push:
+    description: >
+      Whether to push. When false the image is built and discarded and no AWS
+      credentials are requested at all -- which is what makes this usable from
+      pull_request runs, including forks, where OIDC is unavailable.
+    required: false
+    default: "false"
+  registry:
+    description: ECR registry host, e.g. 1234.dkr.ecr.us-east-1.amazonaws.com. Required when push is true.
+    required: false
+    default: ""
+  role-arn:
+    description: IAM role to assume via GitHub OIDC. Required when push is true, and the calling job needs id-token write.
+    required: false
+    default: ""
+  aws-region:
+    description: Region of the registry.
+    required: false
+    default: us-east-1
+  platforms:
+    description: Target platforms for the build.
+    required: false
+    default: linux/amd64
+  cache-scope:
+    description: >
+      GitHub Actions cache scope. Scopes are a flat namespace shared by every
+      build in the repo, so two services sharing one scope will evict each
+      other's layers on every run. Defaults to the repository name, which
+      keeps them separate without the caller having to think about it.
+    required: false
+    default: ""
+
+outputs:
+  image:
+    description: Image reference that was built.
+    value: ${{ steps.ref.outputs.image }}
+  digest:
+    description: Digest of the pushed image, for pinning by content rather than tag. Empty when push is false.
+    value: ${{ steps.build.outputs.digest }}
+
+runs:
+  using: composite
+  steps:
+    # Inputs are interpolated through env rather than directly into the script
+    # body: a `${{ }}` expansion is textual substitution into the shell source,
+    # so a value containing a quote or a backtick would execute rather than
+    # being read as data.
+    - name: Resolve image reference
+      id: ref
+      shell: bash
+      env:
+        PUSH: ${{ inputs.push }}
+        REGISTRY: ${{ inputs.registry }}
+        ROLE_ARN: ${{ inputs.role-arn }}
+        REPOSITORY: ${{ inputs.repository }}
+        TAG: ${{ inputs.tag }}
+      run: |
+        set -euo pipefail
+        if [ "${PUSH}" = "true" ]; then
+          : "${REGISTRY:?registry is required when push is true}"
+          : "${ROLE_ARN:?role-arn is required when push is true}"
+          echo "image=${REGISTRY}/${REPOSITORY}:${TAG}" >> "$GITHUB_OUTPUT"
+        else
+          # No registry host on a throwaway build. Prefixing an empty registry
+          # would produce a leading slash, which buildx rejects as a malformed
+          # reference before it ever gets to building anything.
+          echo "image=${REPOSITORY}:${TAG}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Assume AWS role via OIDC
+      if: inputs.push == 'true'
+      uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+      with:
+        role-to-assume: ${{ inputs.role-arn }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Log in to ECR
+      if: inputs.push == 'true'
+      uses: aws-actions/amazon-ecr-login@d539f0932e70871a027e9d5a9d8fc38589180a64 # v2.1.6
+
+    - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+    - name: Build ${{ inputs.repository }}
+      id: build
+      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      with:
+        context: ${{ inputs.context }}
+        platforms: ${{ inputs.platforms }}
+        push: ${{ inputs.push }}
+        tags: ${{ steps.ref.outputs.image }}
+        cache-from: type=gha,scope=${{ inputs.cache-scope || inputs.repository }}
+        # A pull_request run writing mode=max would evict main's warm layers
+        # from a cache the whole repo shares, so PR builds read the cache but
+        # never write to it.
+        cache-to: ${{ inputs.push == 'true' && format('type=gha,scope={0},mode=max', inputs.cache-scope || inputs.repository) || '' }}

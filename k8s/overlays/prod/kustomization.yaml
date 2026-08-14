@@ -11,10 +11,10 @@ resources:
 # release decision, and it moves only via a reviewed commit.
 images:
   - name: practice-backend
-    newName: 461415799375.dkr.ecr.us-east-1.amazonaws.com/practice-backend
+    newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
     newTag: 0.1.0
   - name: practice-frontend
-    newName: 461415799375.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
+    newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
     newTag: 0.1.0
 
 replicas:

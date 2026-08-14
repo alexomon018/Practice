@@ -32,37 +32,54 @@ Done:
       role, `practice-backend` and `practice-frontend` with `IMMUTABLE` tags, scan-on-push,
       org-wide pull via `aws:PrincipalOrgID`
 - [x] Workflow rewired to the new registry and role ARN
+- [x] OIDC trust corrected for GitHub's immutable claim format — the real `sub` is
+      `repo:alexomon018@58094269/Practice@1332961682:ref:refs/heads/main`, not the name-based
+      form. Both are accepted.
+- [x] Workflow rebases before pushing the staging bump, so a re-run or a closely-spaced second
+      push no longer fails non-fast-forward
+- [x] Argo `practice-dev` applied to the local kind cluster, `Synced` / `Healthy`
 
 Remaining, in order:
-- [ ] **5.** Push the workflow change, confirm the build pushes to `213851292053` and staging
-      pulls from it. Section 5.5.
+
+- [ ] **5.** Confirm a green build pushes to `213851292053` and commits the staging bump.
+      Section 5.5.
 - [ ] **6.** Promote prod onto the new registry via a reviewed PR. Prod still points at the dev
       registry and pins `0.1.0`, which does not exist in the new one — the next normal
       promotion carries it across. Do not hand-edit `newName` ahead of that.
 - [ ] **7.** Only once prod is promoted: delete the dev-account repos and
       `aws/ecr-cross-account-policy.json`. Section 5.7.
-- [ ] **7.** Fill in the prod guardrails — `TODO(human)` in `aws/org/scp-prod.json`. Blocks 8.
-- [ ] **8.** Create the `prod` SCP, attach to `ou-85of-dipikjaf`. Section 2.
-- [ ] **9.** Baseline services: org CloudTrail, GuardDuty delegated admin, cost anomaly monitor,
+- [ ] **8.** Fill in the prod guardrails — `TODO(human)` in `aws/org/scp-prod.json`. Blocks 9.
+- [ ] **9.** Create the `prod` SCP, attach to `ou-85of-dipikjaf`. Section 2.
+- [ ] **10.** Baseline services: org CloudTrail, GuardDuty delegated admin, cost anomaly monitor,
       per-account budgets. Section 4.
-- [ ] **10.** `ProdBreakGlass` permission set + group + the CloudTrail metric filter that alarms
+- [ ] **11.** `ProdBreakGlass` permission set + group + the CloudTrail metric filter that alarms
       on its use. Section 3.
-- [ ] **11.** Enrol MFA on the `Aleksa` Identity Center user. It holds admin on the one account
+- [ ] **12.** Enrol MFA on the `Aleksa` Identity Center user. It holds admin on the one account
       SCPs cannot constrain.
 
-The registry move (3–6) deliberately comes before the prod SCP (7–8): the prod ceiling denies
+The registry move (5–7) deliberately comes before the prod SCP (8–9): the prod ceiling denies
 `ecr:PutImage`, and you do not want to be debugging a registry cutover and a new deny at the
 same time.
+
+Blocked on infrastructure that does not exist yet:
+
+- [ ] Staging and prod have no clusters. Argo, the three overlays and the org-wide pull policy
+      are all in place, but nothing in `439996178694` or `840080484810` can pull an image
+      because there is no EKS in either account. The pull side of the registry stays untested
+      until then. Dev runs on local kind with images side-loaded, so it never exercises it.
 
 Longer term, not blocking:
 
 - [ ] Migrate the workloads sitting in the management account (CDK assets, Elastic Beanstalk,
       `supwr.click`, textract, terraform state) into a member account. Anything there runs
       permanently outside every guardrail in this document.
-- [ ] Correct the stale comment in `k8s/overlays/staging/kustomization.yaml` — CI rewrites
-      `newName` as well as `newTag`, because the workflow passes a full image reference.
 - [ ] Decide whether `aleksa-administrator`, the IAM user in the management account, stays as
       console-only break-glass or gets deleted now that Identity Center works.
+- [ ] The GitHub OIDC trust pins repo ID `1332961682`. Recreating the repo from scratch issues
+      a new ID and breaks the trust with a bare "Not authorized" — the fix is to read the real
+      claim out of CloudTrail's `AssumeRoleWithWebIdentity` event, as done on 2026-08-14.
+- [ ] A tag-triggered release workflow would need its own `sub` entry (`:ref:refs/tags/*`).
+      The current trust covers `refs/heads/main` only.
 
 ## 0. Bootstrap the admin path
 
