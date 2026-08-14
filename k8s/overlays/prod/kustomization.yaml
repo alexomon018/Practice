@@ -8,14 +8,16 @@ resources:
   - pdb.yaml
 
 # Prod is promoted by tag, never by "latest" -- the tag here is the whole
-# release decision, and it moves only via a reviewed commit.
+# release decision. It is copied verbatim from the staging overlay by the
+# promote-prod job, and that job only runs after a required reviewer approves
+# it, so this value never moves without a human in the loop.
 images:
   - name: practice-backend
     newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
-    newTag: 0.1.0
+    newTag: 0906ed5
   - name: practice-frontend
     newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
-    newTag: 0.1.0
+    newTag: 0906ed5
 
 replicas:
   - name: backend

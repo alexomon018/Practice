@@ -1,0 +1,67 @@
+name: deploy-dev
+
+# The integration path: every merge into develop builds, pushes to ECR and
+# pins the dev overlay. Same paths filter as deploy.yml -- changes under k8s/
+# are deployment state that Argo reads directly, and rebuilding on them would
+# make this workflow retrigger itself on its own pin commit.
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/deploy-dev.yml"
+      - ".github/workflows/_build.yml"
+      - ".github/actions/ecr-build-push/**"
+      - ".github/scripts/pin-overlay.sh"
+  workflow_dispatch:
+
+# Deny by default, grant per job.
+permissions: {}
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_build.yml
+    with:
+      push: true
+      registry: ${{ vars.ECR_REGISTRY }}
+      role-arn: ${{ vars.AWS_ROLE_TO_ASSUME }}
+      aws-region: us-east-1
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      # No id-token here: this job pushes a commit, it never talks to AWS.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install kustomize
+        env:
+          KUSTOMIZE_VERSION: v5.8.1
+          KUSTOMIZE_SHA256: 029a7f0f4e1932c52a0476cf02a0fd855c0bb85694b82c338fc648dcb53a819d
+        run: |
+          curl -sSfL -o kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          echo "${KUSTOMIZE_SHA256}  kustomize.tar.gz" | sha256sum -c -
+          tar -xzf kustomize.tar.gz
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Pin dev to this SHA
+        env:
+          REGISTRY: ${{ vars.ECR_REGISTRY }}
+          OVERLAY: dev
+          TAG: ${{ needs.build.outputs.tag }}
+        run: .github/scripts/pin-overlay.sh

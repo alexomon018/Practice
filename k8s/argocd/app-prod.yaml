@@ -13,6 +13,10 @@ spec:
     server: https://kubernetes.default.svc
     namespace: practice-prod
 
+  # The GitHub `production` environment approval is the gate now, so there is
+  # no second manual click here. selfHeal is what makes `git revert` of a
+  # promotion commit a working rollback.
   syncPolicy:
+    automated: { prune: true, selfHeal: true }
     syncOptions:
       - CreateNamespace=false

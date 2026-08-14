@@ -14,7 +14,9 @@
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
             "repo:alexomon018@58094269/Practice@1332961682:ref:refs/heads/main",
-            "repo:alexomon018/Practice:ref:refs/heads/main"
+            "repo:alexomon018/Practice:ref:refs/heads/main",
+            "repo:alexomon018@58094269/Practice@1332961682:ref:refs/heads/develop",
+            "repo:alexomon018/Practice:ref:refs/heads/develop"
           ]
         }
       }

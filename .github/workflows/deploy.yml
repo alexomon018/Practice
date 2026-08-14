@@ -12,15 +12,18 @@ on:
       - ".github/workflows/deploy.yml"
       - ".github/workflows/_build.yml"
       - ".github/actions/ecr-build-push/**"
-      - ".github/scripts/pin-staging.sh"
+      - ".github/scripts/pin-overlay.sh"
   workflow_dispatch:
 
 # Deny by default, grant per job. Anything added below starts with no token
 # scopes at all rather than quietly inheriting someone else's.
 permissions: {}
 
+# Build and staging share a group. promote-prod deliberately sits in its own
+# group below: an approval that has been waiting for hours must not queue
+# behind an unrelated staging deploy that started while it waited.
 concurrency:
-  group: deploy
+  group: deploy-staging
   cancel-in-progress: false
 
 jobs:
@@ -35,8 +38,7 @@ jobs:
       role-arn: ${{ vars.AWS_ROLE_TO_ASSUME }}
       aws-region: us-east-1
 
-  # Staging only. Prod is promoted by a human editing its newTag in a PR,
-  # which is the entire point of prod having no automated sync.
+  # Staging deploys unattended. Prod does not -- see promote-prod below.
   deploy-staging:
     needs: build
     runs-on: ubuntu-latest
@@ -63,5 +65,46 @@ jobs:
       - name: Pin staging to this SHA
         env:
           REGISTRY: ${{ vars.ECR_REGISTRY }}
+          OVERLAY: staging
           TAG: ${{ needs.build.outputs.tag }}
-        run: .github/scripts/pin-staging.sh
+        run: .github/scripts/pin-overlay.sh
+
+  # The gate. `environment: production` holds this job in the Actions UI until
+  # a required reviewer approves it -- nothing below runs before that click.
+  #
+  # It does not rebuild. The tag is read out of the staging overlay, so what
+  # ships to prod is the exact artifact staging has been running, not a fresh
+  # build of the same source that could resolve a different base image.
+  promote-prod:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      # No id-token here either: promotion is a commit, not a build.
+      contents: write
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install kustomize
+        env:
+          KUSTOMIZE_VERSION: v5.8.1
+          KUSTOMIZE_SHA256: 029a7f0f4e1932c52a0476cf02a0fd855c0bb85694b82c338fc648dcb53a819d
+        run: |
+          curl -sSfL -o kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          echo "${KUSTOMIZE_SHA256}  kustomize.tar.gz" | sha256sum -c -
+          tar -xzf kustomize.tar.gz
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Promote staging's image to prod
+        env:
+          REGISTRY: ${{ vars.ECR_REGISTRY }}
+          OVERLAY: prod
+          SOURCE_OVERLAY: staging
+        run: .github/scripts/pin-overlay.sh
