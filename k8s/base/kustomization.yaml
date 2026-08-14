@@ -1,7 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: practice
+# No namespace here on purpose: each overlay sets it, which also renames
+# namespace.yaml. Base is not meant to be applied directly.
 
 resources:
   - namespace.yaml

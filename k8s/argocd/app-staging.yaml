@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: practice-staging
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/alexomon018/Practice.git
+    targetRevision: main
+    path: k8s/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: practice-staging
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }

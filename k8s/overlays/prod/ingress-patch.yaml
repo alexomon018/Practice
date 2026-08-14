@@ -1,14 +1,16 @@
-
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: practice
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
-
-  ingressClassName: nginx
-
+  tls:
+    - hosts:
+        - practice.example.com
+      secretName: practice-tls
   rules:
-    - host: practice.local
+    - host: practice.example.com
       http:
         paths:
           - path: /api

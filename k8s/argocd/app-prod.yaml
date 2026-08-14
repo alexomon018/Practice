@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: practice-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/alexomon018/Practice.git
+    targetRevision: main
+    path: k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: practice-prod
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false

@@ -1,14 +1,10 @@
-
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: practice
 spec:
-
-  ingressClassName: nginx
-
   rules:
-    - host: practice.local
+    - host: staging.practice.example.com
       http:
         paths:
           - path: /api

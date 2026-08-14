@@ -1,0 +1,28 @@
+{
+  "_TODO(human)": "Add the prod-specific Deny statements below ProtectDeploymentRoles, then delete this key before uploading (AWS rejects unknown top-level keys).",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ProtectDeploymentRoles",
+      "Effect": "Deny",
+      "Action": [
+        "iam:DeleteRole",
+        "iam:DeleteRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:AttachRolePolicy",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:UpdateRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/prod-deploy",
+        "arn:aws:iam::*:role/aws-service-role/*"
+      ],
+      "Condition": {
+        "ArnNotLike": {
+          "aws:PrincipalArn": "arn:aws:iam::*:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ProdBreakGlass_*"
+        }
+      }
+    }
+  ]
+}

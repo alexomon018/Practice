@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: practice-dev
+
+resources:
+  - ../../base
+
+# Local images built into the kind nodes with `kind load docker-image`.
+# No registry prefix -- there is no registry to pull from.
+images:
+  - name: practice-backend
+    newTag: 0.1.0
+  - name: practice-frontend
+    newTag: 0.1.0
+
+# One of each: kind runs on a laptop, and a second replica proves nothing
+# here that the staging overlay does not prove better.
+replicas:
+  - name: backend
+    count: 1
+  - name: frontend
+    count: 1
+
+patches:
+  - path: backend-config-patch.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/environment: dev

@@ -1,0 +1,16 @@
+# Production Postgres. Base ships a single instance on 1Gi with no backups,
+# which is correct for kind and unacceptable here.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+
+# TODO(human): add the spec that hardens this cluster for production.
+#
+# Fields CNPG expects under spec:
+#   instances            int
+#   storage              { size, storageClass }
+#   resources            { requests: {cpu, memory}, limits: {memory} }
+#   backup               { barmanObjectStore: { destinationPath, s3Credentials },
+#                          retentionPolicy }
+#   affinity             { enablePodAntiAffinity, topologyKey }

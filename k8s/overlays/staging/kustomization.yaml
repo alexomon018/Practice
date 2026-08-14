@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: practice-staging
+
+resources:
+  - ../../base
+
+# CI owns both fields here. `kustomize edit set image` is passed a full image
+# reference, so every push to main rewrites newName and newTag together --
+# that commit is what Argo then syncs. Editing these by hand is pointless.
+images:
+  - name: practice-backend
+    newName: 461415799375.dkr.ecr.us-east-1.amazonaws.com/practice-backend
+    newTag: 0.1.0
+  - name: practice-frontend
+    newName: 461415799375.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
+    newTag: 0.1.0
+
+replicas:
+  - name: backend
+    count: 2
+  - name: frontend
+    count: 2
+
+patches:
+  - path: postgres-patch.yaml
+  - path: ingress-patch.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/environment: staging

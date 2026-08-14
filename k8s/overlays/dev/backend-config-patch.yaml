@@ -1,0 +1,9 @@
+# Base carries production-shaped defaults so that a missing overlay fails
+# safe rather than silently shipping debug logging. Dev opts back down.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+data:
+  NODE_ENV: development
+  LOG_LEVEL: debug
