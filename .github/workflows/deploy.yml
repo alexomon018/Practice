@@ -108,3 +108,10 @@ jobs:
           OVERLAY: prod
           SOURCE_OVERLAY: staging
         run: .github/scripts/pin-overlay.sh
+
+      # Runs after the promotion, never before: a tag naming a release that
+      # failed to land is worse than an untagged one that did.
+      - name: Tag the release
+        env:
+          OVERLAY: prod
+        run: .github/scripts/tag-release.sh

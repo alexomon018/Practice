@@ -17,7 +17,8 @@
         "ecr:CompleteLayerUpload",
         "ecr:PutImage",
         "ecr:BatchGetImage",
-        "ecr:GetDownloadUrlForLayer"
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:DescribeImages"
       ],
       "Resource": [
         "arn:aws:ecr:us-east-1:213851292053:repository/practice-backend",
