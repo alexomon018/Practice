@@ -5,22 +5,22 @@ kind: Kustomization
 # namespace.yaml. Base is not meant to be applied directly.
 
 resources:
-  - namespace.yaml
-  - postgres-cluster.yaml
-  - backend-configmap.yaml
-  - backend-service.yaml
-  - backend-deployment.yaml
-  - frontend-configmap.yaml
-  - frontend-service.yaml
-  - frontend-deployment.yaml
-  - ingress.yaml
+- namespace.yaml
+- postgres-cluster.yaml
+- backend-configmap.yaml
+- backend-service.yaml
+- backend-deployment.yaml
+- frontend-configmap.yaml
+- frontend-service.yaml
+- frontend-deployment.yaml
+- ingress.yaml
 
 configMapGenerator:
-  - name: postgres-initdb
-    files:
-      - initdb/01_schema.sql
-      - initdb/02_seed.sql
-      - initdb/03_ownership.sql
+- files:
+  - initdb/01_schema.sql
+  - initdb/02_seed.sql
+  - initdb/03_ownership.sql
+  name: postgres-initdb
 
 # The Cluster references postgres-initdb by name, and kustomize's name-reference
 # rewriting does not know about CNPG's CRD -- so the hash suffix must be off.
@@ -28,9 +28,8 @@ generatorOptions:
   disableNameSuffixHash: true
 
 labels:
-  - includeSelectors: false
-    pairs:
-      app.kubernetes.io/part-of: practice
+- pairs:
+    app.kubernetes.io/part-of: practice
 
 # The one image pin in this repo. All three overlays inherit it, so a commit
 # carries exactly one answer to "which build is this?" -- and an environment
@@ -38,9 +37,9 @@ labels:
 # tag. Written by CI on every deploy; editing it by hand pins an image that
 # may not exist in ECR.
 images:
-  - name: practice-backend
-    newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
-    newTag: d3d3b28
-  - name: practice-frontend
-    newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
-    newTag: d3d3b28
+- name: practice-backend
+  newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
+  newTag: a263c2b
+- name: practice-frontend
+  newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
+  newTag: a263c2b
