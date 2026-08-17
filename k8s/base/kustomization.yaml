@@ -29,7 +29,7 @@ labels:
 images:
 - name: practice-backend
   newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend
-  newTag: a263c2b
+  newTag: 6c5ef56
 - name: practice-frontend
   newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-frontend
-  newTag: a263c2b
+  newTag: 6c5ef56
