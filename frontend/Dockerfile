@@ -18,24 +18,18 @@ RUN npm run build
 
 FROM nginx:${NGINX_VERSION} AS runtime
 
-# Replace the stock server block with our static-file config.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# --from=build copies ONLY the compiled output across the stage boundary.
-# node_modules, source files and the npm cache stay behind in stage 1 and are
-# never part of this image or its history.
+
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# The official nginx entrypoint executes every *.sh in this directory before
-# starting nginx -- our hook to render config.js from environment variables.
+
 COPY docker-entrypoint.d/10-runtime-config.sh /docker-entrypoint.d/10-runtime-config.sh
 RUN chmod +x /docker-entrypoint.d/10-runtime-config.sh
 
-# Defaults; Compose overrides them per environment.
 ENV API_BASE_URL=/api \
     APP_TITLE="Docker Practice Shop"
 
-# Documentation only -- see the note in backend/Dockerfile.
 EXPOSE 80
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \

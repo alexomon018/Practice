@@ -1,9 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# No namespace here on purpose: each overlay sets it, which also renames
-# namespace.yaml. Base is not meant to be applied directly.
-
 resources:
 - namespace.yaml
 - postgres-cluster.yaml
@@ -22,8 +19,6 @@ configMapGenerator:
   - initdb/03_ownership.sql
   name: postgres-initdb
 
-# The Cluster references postgres-initdb by name, and kustomize's name-reference
-# rewriting does not know about CNPG's CRD -- so the hash suffix must be off.
 generatorOptions:
   disableNameSuffixHash: true
 
@@ -31,11 +26,6 @@ labels:
 - pairs:
     app.kubernetes.io/part-of: practice
 
-# The one image pin in this repo. All three overlays inherit it, so a commit
-# carries exactly one answer to "which build is this?" -- and an environment
-# selects a build by pointing at a commit, not by keeping its own copy of the
-# tag. Written by CI on every deploy; editing it by hand pins an image that
-# may not exist in ECR.
 images:
 - name: practice-backend
   newName: 213851292053.dkr.ecr.us-east-1.amazonaws.com/practice-backend

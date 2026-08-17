@@ -59,6 +59,7 @@ jobs:
           repository: practice-${{ matrix.service }}
           context: ./${{ matrix.service }}
           tag: ${{ steps.sha.outputs.short }}
+          platforms: linux/amd64,linux/arm64
           push: ${{ inputs.push }}
           registry: ${{ inputs.registry }}
           role-arn: ${{ inputs.role-arn }}
